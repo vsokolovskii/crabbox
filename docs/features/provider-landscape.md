@@ -86,7 +86,7 @@ an opt-in live smoke. Until then, document it as an observed adjacent system.
 | System | Support stance | Why |
 | --- | --- | --- |
 | Mitos | Observe, do not support directly yet. | Its main differentiator is live microVM forking. Crabbox needs generic fork/checkpoint semantics hardened before a Mitos adapter would be clean. |
-| E2B | Supported as `e2b`. | Delegated sandbox execution maps cleanly to provider-owned sessions and URL bridge behavior. |
+| E2B | Supported as `e2b`. | Delegated sandbox execution maps cleanly to provider-owned sessions, envd file/process APIs, and URL bridge behavior. |
 | Vercel Sandbox | Supported as `vercel-sandbox`. | Ephemeral Linux sandbox execution fits `delegated-run`; keep adding evidence and artifact parity before more surface area. |
 | Modal | Supported as `modal`. | Provider-owned container execution fits delegated runs, especially Python and ML-shaped workloads. |
 | Cloudflare Sandbox SDK | Candidate, not the same as current Cloudflare providers. | The SDK can be a good delegated-run backend if the lifecycle, file, process, preview, and cleanup contract is stable enough. |

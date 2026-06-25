@@ -9,8 +9,9 @@ Read when:
 `provider: e2b` delegates Linux sandbox lifecycle and command execution to
 [E2B](https://e2b.app). Crabbox creates an E2B sandbox from a template, tags it
 with Crabbox metadata, uploads the local Git-managed working set as a gzipped
-archive, and streams remote command output back through E2B's process API. There
-is no Crabbox-managed SSH target; the sandbox owns command transport.
+archive through E2B envd, and streams remote command output back through E2B's
+process API. There is no Crabbox-managed SSH target; the sandbox owns command
+transport.
 
 E2B is a delegated-run provider: Linux-only, never brokered through the
 coordinator, and run directly from the CLI.
@@ -66,12 +67,14 @@ Available flags: `--e2b-template`, `--e2b-workdir`, `--e2b-user`,
 
 ## Behavior
 
-- `warmup` creates an E2B sandbox from `e2b.template` (default `base`), stores
-  Crabbox metadata on the sandbox, and records a local `cbx_...` lease claim. The
-  sandbox is kept until an explicit `stop` regardless of `--keep`.
+- `warmup` creates an E2B sandbox from `e2b.template` (default `base`) through
+  E2B `POST /sandboxes`, stores Crabbox metadata on the sandbox, and records a
+  local `cbx_...` lease claim. The sandbox is kept until an explicit `stop`
+  regardless of `--keep`.
 - `run` creates or reuses a sandbox, syncs the manifest into the resolved
-  workspace path, streams stdout/stderr, and returns the remote exit code.
-  Sandboxes always have internet access enabled.
+  workspace path through envd `POST /files`, streams stdout/stderr from
+  `POST /process.Process/Start`, and returns the remote exit code. Sandboxes
+  always have secure envd access and internet access enabled.
 - The sandbox timeout is derived from `--ttl`: unset defaults to 5 minutes and
   any value is capped at 1 hour.
 - Commands run under `/bin/bash -l -c`. When `e2b.user` is set, both file uploads
@@ -96,14 +99,14 @@ rejected before sandbox creation or sync touches the filesystem.
 Because E2B owns sync and command transport, these `run` options are rejected:
 
 - `--checksum`, `--sync-only`, `--force-sync-large`, and `--full-resync` — E2B
-  delegates sync (archive upload only).
+  delegates sync through envd archive upload/extract.
 - `--script`, `--script-stdin`, `--fresh-pr`, `--capture-stdout`,
   `--capture-stderr`, `--capture-on-fail`, `--download`, `--artifact-glob`,
   `--require-artifact`, `--env-helper`, `--emit-proof`, and `--stop-after` —
   E2B delegates run execution.
 
-Large-sync preflight guardrails do not apply: without `--force-sync-large`
-support, the archive is uploaded as built.
+Large-sync preflight guardrails still apply. Because `--force-sync-large` is not
+supported for E2B, an oversized sync is rejected instead of force-uploaded.
 
 ## Limitations
 
