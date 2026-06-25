@@ -282,15 +282,15 @@
   "e2b": {
     "status": "built-in",
     "category": "delegated-sandbox",
-    "substrate": "E2B Firecracker sandbox",
+    "substrate": "E2B sandbox",
     "location": "provider-managed",
     "ssh": "no",
-    "sync": "provider-owned",
+    "sync": "archive-sync",
     "gpu": "no",
     "lifecycle": "E2B",
     "cleanup": "sandbox kill or expiry",
-    "bestFit": "Hosted ephemeral code sandbox",
-    "caveat": "URL bridge is provider-specific; no normal SSH lease",
+    "bestFit": "Hosted Linux sandbox through delegated file/process APIs",
+    "caveat": "No normal SSH lease; envd and preview URLs use E2B hostnames",
     "docs": "e2b.md"
   },
   "exe-dev": {

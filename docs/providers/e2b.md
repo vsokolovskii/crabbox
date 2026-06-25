@@ -6,18 +6,21 @@ Read when:
 - configuring E2B templates, sandbox users, or workdirs;
 - changing `internal/providers/e2b`.
 
-E2B is a delegated-run provider. Crabbox uses E2B's public sandbox REST API for
-sandbox lifecycle and the per-sandbox `envd` APIs for file upload and command
-execution. E2B owns sandbox state and process transport; Crabbox owns local
-config, repo claims, sync manifests and guardrails, slugs, timing summaries, and
-normalized `list`/`status` rendering. There is no Crabbox SSH lease and no broker
-coordinator — the CLI talks to E2B directly.
+E2B is a delegated-run provider. Crabbox uses E2B's platform API for sandbox
+lifecycle (`POST /sandboxes`, `POST /sandboxes/{sandboxID}/connect`,
+`GET /v2/sandboxes`, `GET /sandboxes/{sandboxID}`, and
+`DELETE /sandboxes/{sandboxID}`) and the per-sandbox `envd` APIs for file upload
+and command execution (`POST /files` and `POST /process.Process/Start`). E2B
+owns sandbox state and process transport; Crabbox owns local config, repo claims,
+sync manifests and guardrails, slugs, timing summaries, and normalized
+`list`/`status` rendering. There is no Crabbox SSH lease and no broker
+coordinator; the CLI talks to E2B directly.
 
 ## When to use
 
-Use E2B when the remote Linux sandbox should be owned by E2B and commands run
-through the E2B sandbox APIs. Choose AWS, Hetzner, Static SSH, or Daytona instead
-when you need direct SSH access to the box.
+Use E2B when the remote Linux sandbox should be owned by E2B and commands should
+run through E2B's file/process APIs. Choose AWS, Hetzner, Static SSH, or Daytona
+instead when you need direct SSH access to the box.
 
 E2B is Linux-only. Desktop, browser, code, Actions hydration, and SSH-based run
 options are not available.
@@ -46,13 +49,18 @@ export E2B_API_KEY=e2b_...
 `CRABBOX_E2B_API_KEY` is also accepted and takes precedence over `E2B_API_KEY`.
 Do not pass the key as a command-line argument.
 
+E2B access tokens are not used by Crabbox. E2B's current docs mark
+`E2B_ACCESS_TOKEN` as deprecated for SDK/API use; configure `E2B_API_KEY` instead.
+
 Endpoint overrides:
 
 - `CRABBOX_E2B_API_URL` / `E2B_API_URL` or `e2b.apiUrl` override the default API
   URL `https://api.e2b.app`. Overrides must use HTTPS; plain HTTP is accepted
   only for localhost or loopback development endpoints.
-- `CRABBOX_E2B_DOMAIN` / `E2B_DOMAIN` or `e2b.domain` override the default sandbox
-  domain `e2b.app`.
+- `CRABBOX_E2B_DOMAIN` / `E2B_DOMAIN` or `e2b.domain` override the sandbox
+  hostname suffix used for envd and preview URLs. The default is `e2b.app`, which
+  makes envd URLs look like `https://49983-<sandbox-id>.e2b.app/...`. This is an
+  advanced self-hosted or development override; pass only a hostname, not a URL.
 
 ## Config
 
@@ -61,7 +69,7 @@ provider: e2b
 target: linux
 e2b:
   apiUrl: https://api.e2b.app
-  domain: e2b.app
+  domain: e2b.app # advanced: hostname suffix, not a URL
   template: base
   workdir: crabbox
   user: ""
@@ -98,11 +106,12 @@ files.
 ## Lifecycle
 
 1. Create or resolve a Crabbox-owned E2B sandbox from `e2b.template` (default
-   `base`), with internet access enabled.
+   `base`), with secure envd access and internet access enabled.
 2. Store Crabbox metadata on the sandbox and write a local repo claim.
 3. Build the Crabbox sync manifest, upload a gzipped archive into `/tmp`, and
-   extract it into the resolved workdir.
-4. Execute the command through the E2B process stream in that workdir.
+   extract it into the resolved workdir through envd.
+4. Execute `/bin/bash -l -c <command>` through the E2B process stream in that
+   workdir.
 5. Delete the sandbox on release unless the lease is kept.
 
 E2B caps sandbox timeouts at one hour. Crabbox clamps a longer local lease TTL to
@@ -112,7 +121,7 @@ to five minutes.
 ## Capabilities
 
 - SSH: no.
-- Crabbox sync: yes, archive sync through the E2B file and process APIs.
+- Crabbox sync: yes, archive sync through E2B envd file and process APIs.
 - Desktop / browser / code: no.
 - Actions hydration: no.
 - Coordinator (broker): no — always direct from the CLI.
